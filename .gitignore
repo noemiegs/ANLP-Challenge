@@ -172,3 +172,9 @@ cython_debug/
 
 # specific files
 tf_idf.py
+
+best_model/
+
+results/
+
+logs/
