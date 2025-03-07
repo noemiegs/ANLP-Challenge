@@ -81,11 +81,11 @@ def run_model_comparison():
         model_path = f"models/{model_name.split('/')[-1]}"
         
         # Utilisation de cross-validation si la configuration le demande
-        if merged_config["CROSS_VALIDATION"]:
+        if config["CROSS_VALIDATION"]:
             # Si CROSS_VALIDATION est True, utiliser la méthode de CV
-            metrics = cross_validate(data_aug, n_splits=merged_config["CV_SPLITS"], stratify=merged_config["STRATIFY"])
+            metrics = cross_validate(data_aug, n_splits=config["CV_SPLITS"], stratify=config["STRATIFY"])
             results.append({
-                "Config": merged_config["name"],
+                "Config": config["name"],
                 "Accuracy": metrics["accuracy"],
                 "F1": metrics["f1"]
             })
@@ -97,7 +97,7 @@ def run_model_comparison():
             print(f"📊 Résultats: {metrics}")
             print(metrics.keys())
             results.append({
-                "Config": merged_config["name"],
+                "Config": config["name"],
                 "Accuracy": metrics["accuracy"],
                 "F1": metrics["f1"]
             })

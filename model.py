@@ -40,7 +40,7 @@ CKPT_PATH = None # si chargement d'un modèle pré-entraîné, inférence unique
 # paramètres d'entraînement
 MODEL_NAME = "bert-base-multilingual-cased"
 MODEL_PATH_NAME = "models/bert-base-multilingual-cased"
-TRAIN_EPOCHS = 2
+TRAIN_EPOCHS = 5
 LEARNING_RATE = 3e-5
 BATCH_SIZE = 128
 STRATIFY = True
