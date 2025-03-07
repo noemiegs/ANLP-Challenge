@@ -35,12 +35,12 @@ DATA_PATH = "data/train_submission.csv"
 TEST_PATH = "data/test_without_labels.csv"
 LABEL_MAPPING_PATH = "data/mapping/test_intfloat_mappings.json"
 OUTPUT_PATH = "submission.csv"
-CKPT_PATH = '/home/ecstatic_easley/ANLP-Challenge/models/test_intfloat/checkpoint-9401' # si chargement d'un modèle pré-entraîné, inférence uniquement dans ce cas
+CKPT_PATH = None # si chargement d'un modèle pré-entraîné, inférence uniquement dans ce cas
 
 # paramètres d'entraînement
-MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
-MODEL_PATH_NAME = "models/test_intfloat"
-TRAIN_EPOCHS = 1
+MODEL_NAME = "bert-base-multilingual-cased"
+MODEL_PATH_NAME = "models/bert-base-multilingual-cased"
+TRAIN_EPOCHS = 2
 LEARNING_RATE = 3e-5
 BATCH_SIZE = 128
 STRATIFY = True
@@ -54,12 +54,24 @@ LOG_METRICS = True
 
 
 def remove_urls(data):
+    """
+    Supprime les URLs des textes.
+    
+    Args :
+        data (dataframe) : les données à nettoyer
+    """
     if REM_URL:
         url_pattern = r'https://\S+'
         data['Text'] = data['Text'].apply(lambda x: re.sub(url_pattern, '', str(x)))
 
 
 def augment_data(data):
+    """
+    Applique des augmentations de données pour augmenter la diversité du texte.
+    
+    Args :
+        data (dataframe) : les données à augmenter
+    """
     if DATA_AUGMENTATION:
         label_counts = data.Label.value_counts()
         data_aug = pd.DataFrame(columns=['Text', 'Label'])
@@ -78,22 +90,24 @@ def augment_data(data):
 
 
 
-# Ajout d'un augmentateur pour les fautes de frappe, suppression de mots, et échange de mots
-def get_augmented_examples(example, augmenter_typo, augmenter_delete, augmenter_swap):
-    """
-    Applique différentes augmentations au texte de manière aléatoire.
-    """
-    # Décider aléatoirement d'appliquer certaines transformations
-    if random.random() < 0.3:  # 30% de chance pour une faute de frappe
-        example = augmenter_typo.augment(example)
+# version anlp_aug
+
+# # Ajout d'un augmentateur pour les fautes de frappe, suppression de mots, et échange de mots
+# def get_augmented_examples(example, augmenter_typo, augmenter_delete, augmenter_swap):
+#     """
+#     Applique différentes augmentations au texte de manière aléatoire.
+#     """
+#     # Décider aléatoirement d'appliquer certaines transformations
+#     if random.random() < 0.3:  # 30% de chance pour une faute de frappe
+#         example = augmenter_typo.augment(example)
     
-    if random.random() < 0.3:  # 30% de chance de supprimer un mot
-        example = augmenter_delete.augment(example)
+#     if random.random() < 0.3:  # 30% de chance de supprimer un mot
+#         example = augmenter_delete.augment(example)
     
-    if random.random() < 0.4:  # 30% de chance de permuter deux mots
-        example = augmenter_swap.augment(example)
+#     if random.random() < 0.4:  # 40% de chance de permuter deux mots
+#         example = augmenter_swap.augment(example)
     
-    return example
+#     return example
 
 # def augment_data(data):
 #     """
@@ -126,6 +140,13 @@ def get_augmented_examples(example, augmenter_typo, augmenter_delete, augmenter_
 
 
 def split_data(data, use_stratify=STRATIFY):
+    """
+    Divise les données en train, validation et test sets.
+
+    Args :
+        data (dataframe) : les données à diviser
+        use_stratify (bool) : si True, les données sont divisées de manière stratifiée
+    """
     data['LabelID'] = pd.factorize(data['Label'])[0]
     stratify = data['LabelID'] if use_stratify else None 
     random_state = 42 if RANDOM_STATE else None
@@ -140,6 +161,14 @@ def split_data(data, use_stratify=STRATIFY):
 
 
 def cross_validate(data, n_splits=3, stratify=STRATIFY):
+    """
+    Réalise une cross-validation sur les données.
+    
+    Args :
+        data (dataframe) : les données à utiliser
+        n_splits (int) : le nombre de splits pour la cross-validation
+        stratify (bool) : si True, les données sont divisées de manière stratifiée
+    """
     data['LabelID'] = pd.factorize(data['Label'])[0]
     if stratify: 
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
@@ -174,12 +203,25 @@ def cross_validate(data, n_splits=3, stratify=STRATIFY):
 mlflow.set_experiment(MODEL_PATH_NAME)
 
 def compute_metrics(pred):
+    """
+    Calcule les métriques d'évaluation du modèle.
+
+    Args :
+        pred : les prédictions du modèle
+    """
     preds = pred.predictions.argmax(axis=1)
     labels = pred.label_ids
     precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='weighted')
     return { 'accuracy': accuracy_score(labels, preds), 'f1': f1, 'precision': precision, 'recall': recall }
 
 def log_results(params, metrics):
+    """
+    Log les résultats de l'entraînement dans un fichier CSV.
+
+    Args :
+        params (dict) : les paramètres de l'entraînement
+        metrics (dict) : les métriques d'évaluation
+    """
     if LOG_METRICS:
         result_line = {**params, **metrics}
         log_exists = os.path.exists(LOG_FILE_PATH)
@@ -262,7 +304,7 @@ class NLPTrainer:
     def evaluate(self):
         """Évalue le modèle"""
         tokenized_data = self.tokenize()
-        trainer = Trainer(model=self.model)
+        trainer = Trainer(model=self.model, compute_metrics=compute_metrics)
         test_results = trainer.evaluate(tokenized_data["test"])
         return test_results
 
@@ -326,7 +368,8 @@ if __name__ == '__main__':
         trainer = NLPTrainer(dataset, ckpt_path=CKPT_PATH)
         if CKPT_PATH is None:
             trainer.train()
-        # test_results = trainer.evaluate()
+        test_results = trainer.evaluate()
+        print("Résultats finaux:", test_results)
 
     test_results = None  # Initialisation pour éviter l'erreur d'unbound variable
     trainer = None  # S'assure que trainer est toujours défini

@@ -6,10 +6,10 @@ from transformers import set_seed
 # Paramètres globaux
 DATA_PATH = "data/train_submission.csv"
 MODELS = [
-    "intfloat/multilingual-e5-large-instruct",
+    # "intfloat/multilingual-e5-large-instruct",
     "bert-base-multilingual-cased",
     "xlm-roberta-base",
-    "distilbert-base-multilingual-cased"
+    # "distilbert-base-multilingual-cased"
 ]
 
 EARLY_STOPPING = True
@@ -18,6 +18,7 @@ BATCH_SIZE = 64,
 TRAIN_EPOCHS = 1,
 LEARNING_RATE = 3e-5
 RANDOM_STATE = True
+CKPT_PATH = '/home/ecstatic_easley/ANLP-Challenge/models/test_intfloat/checkpoint-9401'
 
 CONFIG_TESTS = [
     {"name": "Baseline", "CROSS_VALIDATION": False, "DATA_AUGMENTATION": False, "REMOVE_OCCURENCES": False, "REM_URL": False, "STRATIFY": False},
@@ -41,11 +42,12 @@ def run_model_comparison():
     results = []
 
     for model_name in MODELS:
-        print(f"Test du modèle: {model_name}")
-        model_path = f"models/{model_name.split('/')[-1]}"
-
-        trainer = NLPTrainer(dataset, model_name=model_name, model_path=model_path)
-        trainer.train()
+        print(f"🚀 Test du modèle: {model_name}")
+        NLPTrainer.MODEL_NAME = model_name
+        NLPTrainer.MODEL_PATH_NAME = f"models/{model_name.split('/')[-1]}"
+        trainer = NLPTrainer(dataset, CKPT_PATH)
+        if CKPT_PATH is None:
+                trainer.train()
         metrics = trainer.evaluate()
         print(f"Résultats: {metrics}")
         print(metrics.keys())
@@ -59,7 +61,7 @@ def run_model_comparison():
     print(f"Résultats sauvegardés dans {RESULTS_FILE_MODEL}")
 
 
-def run_config_tests():
+# def run_config_tests():
     """ Test des différentes configurations sur le modèle prometteur """
     print("Test des configurations...")
     data = pd.read_csv(DATA_PATH).dropna()
@@ -79,15 +81,29 @@ def run_config_tests():
         model_path = f"models/{model_name.split('/')[-1]}"
         
         # Utilisation de cross-validation si la configuration le demande
-        if config["CROSS_VALIDATION"]:
-            metrics = cross_validate(data_aug, n_splits=config["CV_SPLITS"], stratify=config["STRATIFY"])
+        if merged_config["CROSS_VALIDATION"]:
+            # Si CROSS_VALIDATION est True, utiliser la méthode de CV
+            metrics = cross_validate(data_aug, n_splits=merged_config["CV_SPLITS"], stratify=merged_config["STRATIFY"])
+            results.append({
+                "Config": merged_config["name"],
+                "Accuracy": metrics["accuracy"],
+                "F1": metrics["f1"]
+            })
         else:
             dataset = split_data(data_aug, use_stratify=config["STRATIFY"])
             trainer = NLPTrainer(dataset, model_name=model_name, model_path=model_path)
             trainer.train()
             metrics = trainer.evaluate()
-        
-        print(f"Résultats: {metrics}")
+            print(f"📊 Résultats: {metrics}")
+            print(metrics.keys())
+            results.append({
+                "Config": merged_config["name"],
+                "Accuracy": metrics["accuracy"],
+                "F1": metrics["f1"]
+            })
+
+    pd.DataFrame(results).to_csv(RESULTS_FILE_CONFIG, mode='a', header=False, index=False)
+    print(f"✅ Résultats des configs sauvegardés dans {RESULTS_FILE_CONFIG}")
 
 
 if __name__ == "__main__":
