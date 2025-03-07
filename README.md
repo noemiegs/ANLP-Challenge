@@ -20,29 +20,6 @@ Le projet est organisé en plusieurs fichiers permettant l'exploration des donn�
 - **`model.py`** : Interface permettant de lancer un entraînement et une inférence avec un modèle et des hyperparamètres personnalisés.
 - **`model_comparison.py`** : Permet d'effectuer une *grid search*, tester différents modèles et configurations pour identifier la meilleure architecture.
 
-## Exécution du Code
-
-### Entraînement d'un modèle
-Vous pouvez exécuter l'entraînement d'un modèle spécifique en utilisant :
-
-```bash
-python model.py
-```
-
-Pour comparer plusieurs modèles et configurations :
-
-```bash
-python model_comparison.py
-```
-
-### Générer le fichier de submission
-
-Une fois le modèle entraîné, vous pouvez générer le fichier à soumettre sur Kaggle :
-
-```bash
-python run_test_to_submit.ipynb
-```
-
 ## Résultats et Performances
 
 Les résultats obtenus sont évalués avec des métriques classiques comme :
