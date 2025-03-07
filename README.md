@@ -14,11 +14,11 @@ pip install -r requirements.txt
 Le projet est organisé en plusieurs fichiers permettant l'exploration des données, l'entraînement des modèles et la soumission des prédictions.
 
 - **`0-eda.ipynb`** : Notebook contenant l'analyse exploratoire des données (EDA), permettant de comprendre la distribution des classes, la longueur des textes, et les valeurs manquantes.
+- **`1-model_intfloat.ipynb`** : Notebook utilisé pour entraîner et tester notre modèle final basé sur `intfloat/multilingual-e5-large-instruct`.
+- **`2-model_distilbert.ipynb`** : Expérimentations menées avec un autre modèle, `distilbert-base-multilingual-cased`, pour comparer les performances.
+- **`3-run_test_to_submit.ipynb`** : Génère le fichier de soumission pour Kaggle en effectuant une inférence sur le jeu de test.
 - **`model.py`** : Interface permettant de lancer un entraînement et une inférence avec un modèle et des hyperparamètres personnalisés.
 - **`model_comparison.py`** : Permet d'effectuer une *grid search*, tester différents modèles et configurations pour identifier la meilleure architecture.
-- **`model_intfloat.ipynb`** : Notebook utilisé pour entraîner et tester notre modèle final basé sur `intfloat/multilingual-e5-large-instruct`.
-- **`model_distilbert.ipynb`** : Expérimentations menées avec un autre modèle, `distilbert-base-multilingual-cased`, pour comparer les performances.
-- **`run_test_to_submit.ipynb`** : Génère le fichier de soumission pour Kaggle en effectuant une inférence sur le jeu de test.
 
 ## Exécution du Code
 
