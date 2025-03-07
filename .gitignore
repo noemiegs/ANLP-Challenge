@@ -179,3 +179,9 @@ best_model/
 results/
 
 logs/
+
+models/
+
+test_intfloat/
+submission.csv
+data/mapping
