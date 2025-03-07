@@ -47,7 +47,7 @@ def run_model_comparison():
         trainer = NLPTrainer(dataset, model_name=model_name, model_path=model_path)
         trainer.train()
         metrics = trainer.evaluate()
-        print(f"📊 Résultats: {metrics}")
+        print(f"Résultats: {metrics}")
         print(metrics.keys())
         # results.append({
         #     "Model": model_name,
@@ -64,50 +64,30 @@ def run_config_tests():
     print("Test des configurations...")
     data = pd.read_csv(DATA_PATH).dropna()
 
-    results = []
-
     for config in CONFIG_TESTS:
-        merged_config = config
-        print(f"Test config: {merged_config['name']}")
-        data_aug = augment_data(data) if merged_config["DATA_AUGMENTATION"] else data
-        if merged_config["REMOVE_OCCURENCES"]:
+        print(f"Test config: {config['name']}")
+        data_aug = augment_data(data) if config["DATA_AUGMENTATION"] else data
+        if config["REMOVE_OCCURENCES"]:
             data_aug = data_aug.drop_duplicates(subset=['Text'])
-        if merged_config["REM_URL"]:
+        if config["REM_URL"]:
             remove_urls(data_aug)
         
-        
-
         # Fixer la seed
         set_seed(42)
 
-        NLPTrainer.MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
-        NLPTrainer.MODEL_PATH_NAME = f"models/{NLPTrainer.MODEL_NAME}"
+        model_name = "intfloat/multilingual-e5-large-instruct"
+        model_path = f"models/{model_name.split('/')[-1]}"
         
         # Utilisation de cross-validation si la configuration le demande
-        if merged_config["CROSS_VALIDATION"]:
-            # Si CROSS_VALIDATION est True, utiliser la méthode de CV
-            metrics = cross_validate(data_aug, n_splits=merged_config["CV_SPLITS"], stratify=merged_config["STRATIFY"])
-            # results.append({
-            #     "Config": merged_config["name"],
-            #     "Accuracy": metrics["accuracy"],
-            #     "F1": metrics["f1"]
-            # })
+        if config["CROSS_VALIDATION"]:
+            metrics = cross_validate(data_aug, n_splits=config["CV_SPLITS"], stratify=config["STRATIFY"])
         else:
-            # Sinon, entraîner et évaluer normalement
-            dataset = split_data(data_aug, use_stratify=merged_config["STRATIFY"])
-            trainer = NLPTrainer(dataset)
+            dataset = split_data(data_aug, use_stratify=config["STRATIFY"])
+            trainer = NLPTrainer(dataset, model_name=model_name, model_path=model_path)
             trainer.train()
             metrics = trainer.evaluate()
-            print(f"📊 Résultats: {metrics}")
-            print(metrics.keys())
-            # results.append({
-            #     "Config": merged_config["name"],
-            #     "Accuracy": metrics["accuracy"],
-            #     "F1": metrics["f1"]
-            # })
-
-    pd.DataFrame(results).to_csv(RESULTS_FILE_CONFIG, mode='a', header=False, index=False)
-    print(f"Résultats des configs sauvegardés dans {RESULTS_FILE_CONFIG}")
+        
+        print(f"Résultats: {metrics}")
 
 
 if __name__ == "__main__":
