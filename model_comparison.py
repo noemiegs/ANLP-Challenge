@@ -34,17 +34,17 @@ RESULTS_FILE_CONFIG = "logs/config_tests_results.csv"
 
 def run_model_comparison():
     """ Test rapide pour comparer plusieurs modèles """
-    print("📊 Comparaison de modèles...")
+    print("Comparaison de modèles...")
     data = pd.read_csv(DATA_PATH).dropna()
     dataset = split_data(data, use_stratify=False)
 
     results = []
 
     for model_name in MODELS:
-        print(f"🚀 Test du modèle: {model_name}")
-        NLPTrainer.MODEL_NAME = model_name
-        NLPTrainer.MODEL_PATH_NAME = f"models/{model_name.split('/')[-1]}"
-        trainer = NLPTrainer(dataset)
+        print(f"Test du modèle: {model_name}")
+        model_path = f"models/{model_name.split('/')[-1]}"
+
+        trainer = NLPTrainer(dataset, model_name=model_name, model_path=model_path)
         trainer.train()
         metrics = trainer.evaluate()
         results.append({
@@ -54,19 +54,19 @@ def run_model_comparison():
         })
 
     pd.DataFrame(results).to_csv(RESULTS_FILE_MODEL, index=False)
-    print(f"✅ Résultats sauvegardés dans {RESULTS_FILE_MODEL}")
+    print(f"Résultats sauvegardés dans {RESULTS_FILE_MODEL}")
 
 
 def run_config_tests():
     """ Test des différentes configurations sur le modèle prometteur """
-    print("🔬 Test des configurations...")
+    print("Test des configurations...")
     data = pd.read_csv(DATA_PATH).dropna()
 
     results = []
 
     for config in CONFIG_TESTS:
         merged_config = config
-        print(f"⚙️ Test config: {merged_config['name']}")
+        print(f"Test config: {merged_config['name']}")
         data_aug = augment_data(data) if merged_config["DATA_AUGMENTATION"] else data
         if merged_config["REMOVE_OCCURENCES"]:
             data_aug = data_aug.drop_duplicates(subset=['Text'])
@@ -103,7 +103,7 @@ def run_config_tests():
             })
 
     pd.DataFrame(results).to_csv(RESULTS_FILE_CONFIG, mode='a', header=False, index=False)
-    print(f"✅ Résultats des configs sauvegardés dans {RESULTS_FILE_CONFIG}")
+    print(f"Résultats des configs sauvegardés dans {RESULTS_FILE_CONFIG}")
 
 
 if __name__ == "__main__":

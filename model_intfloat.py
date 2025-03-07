@@ -149,7 +149,7 @@ def cross_validate(data, n_splits=3, stratify=STRATIFY):
     fold = 1
 
     for train_idx, val_idx in kf.split(data['Text'], data['LabelID']):
-        print(f"🚨 Fold {fold}/{n_splits}")
+        print(f"Fold {fold}/{n_splits}")
 
         train_data = data.iloc[train_idx]
         val_data = data.iloc[val_idx]
@@ -167,11 +167,8 @@ def cross_validate(data, n_splits=3, stratify=STRATIFY):
 
     # Moyenne des métriques sur tous les folds
     avg_results = {k: sum(d[k] for d in results) / len(results) for k in results[0]}
-    print(f"🏆 Cross-validation moyenne : {avg_results}")
+    print(f"Cross-validation moyenne : {avg_results}")
     return avg_results
-
-
-
 
 
 mlflow.set_experiment(MODEL_PATH_NAME)
@@ -182,7 +179,6 @@ def compute_metrics(pred):
     precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='weighted')
     return { 'accuracy': accuracy_score(labels, preds), 'f1': f1, 'precision': precision, 'recall': recall }
 
-
 def log_results(params, metrics):
     if LOG_METRICS:
         result_line = {**params, **metrics}
@@ -190,23 +186,26 @@ def log_results(params, metrics):
         result_df = pd.DataFrame([result_line])
         result_df.to_csv(LOG_FILE_PATH, mode='a', header=not log_exists, index=False)
 
-
 class NLPTrainer:
-    def __init__(self, dataset, ckpt_path=None):
+    def __init__(self, dataset, model_name="intfloat/multilingual-e5-large-instruct", model_path="models/test_intfloat", ckpt_path=None):
         """
         :param dataset: Le dataset d'entraînement.
-        :param ckpt_path: Chemin vers un modèle pré-entraîné. Si fourni, charge ce modèle.
+        :param model_name: Nom du modèle à utiliser.
+        :param model_path: Chemin où sauvegarder le modèle entraîné.
+        :param ckpt_path: Chemin vers un modèle pré-entraîné.
         """
         self.dataset = dataset
-        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-        self.model_path = f"./{MODEL_PATH_NAME}" if MODEL_PATH_NAME else None
-        
+        self.model_name = model_name
+        self.model_path = model_path  # S'assurer qu'il n'est jamais None
+
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
         if ckpt_path and os.path.exists(ckpt_path):
-            print(f"🔄 Chargement du modèle pré-entraîné depuis: {ckpt_path}")
+            print(f"Chargement du modèle pré-entraîné depuis: {ckpt_path}")
             self.model = AutoModelForSequenceClassification.from_pretrained(ckpt_path)
         else:
-            print("🏋️ Nouveau modèle chargé pour l'entraînement")
-            self.model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=len(set(dataset['train']['LabelID'])))
+            print(f"Nouveau modèle {self.model_name} chargé pour l'entraînement")
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name, num_labels=len(set(dataset['train']['LabelID'])))
 
     def tokenize(self):
         """Applique la tokenisation sur le dataset"""
@@ -221,12 +220,15 @@ class NLPTrainer:
         """Entraîne le modèle"""
         tokenized_data = self.tokenize()
 
+        # Vérifier que self.model_path n'est pas None, sinon définir une valeur par défaut
+        if self.model_path is None:
+            self.model_path = "./default_model"  # Définit un répertoire par défaut
+
         # Définir les arguments d'entraînement
         args = TrainingArguments(
-            output_dir=self.model_path,
-            evaluation_strategy="epoch", # comment for final training
+            output_dir=self.model_path,  # Maintenant, il est toujours une chaîne valide
+            evaluation_strategy="epoch",  # comment for final training
             save_strategy="epoch",
-            save_only_model=True,
             save_total_limit=2,
             learning_rate=LEARNING_RATE,
             per_device_train_batch_size=BATCH_SIZE,
@@ -236,6 +238,7 @@ class NLPTrainer:
             greater_is_better=True,
             fp16=torch.cuda.is_available()
         )
+
 
         trainer = Trainer(
             model=self.model,
@@ -253,7 +256,7 @@ class NLPTrainer:
             # Sauvegarder le meilleur modèle
             self.model.save_pretrained(self.model_path)
             self.tokenizer.save_pretrained(self.model_path)
-            print(f"✅ Modèle sauvegardé dans {self.model_path}")
+            print(f"Modèle sauvegardé dans {self.model_path}")
 
     def evaluate(self):
         """Évalue le modèle"""
@@ -276,12 +279,15 @@ class NLPTrainer:
         self.model.eval()
 
         # Créer DataLoader
-        dataset = TensorDataset(inputs["input_ids"], inputs["attention_mask"])
+        dataset = TensorDataset(
+            torch.tensor(inputs["input_ids"]), 
+            torch.tensor(inputs["attention_mask"])
+        )
         dataloader = DataLoader(dataset, batch_size=128)
 
         predictions = []
         with torch.no_grad():
-            for batch in tqdm(dataloader, desc="🔍 Running Inference", unit="batch"):
+            for batch in tqdm(dataloader, desc="Running Inference", unit="batch"):
                 batch = [tensor.to(device) for tensor in batch]
                 outputs = self.model(input_ids=batch[0], attention_mask=batch[1])
                 preds = torch.argmax(outputs.logits, dim=1).cpu().numpy()
@@ -300,10 +306,10 @@ class NLPTrainer:
         # Sauvegarder le fichier de soumission
         df = df[["ID", "Label"]]
         if os.path.exists(output_file):
-            print(f"❌ Le fichier {output_file} existe déjà.")
+            print(f"Le fichier {output_file} existe déjà.")
         else:
             df.to_csv(output_file, index=False)
-            print(f"✅ Fichier de soumission sauvegardé: {output_file}")
+            print(f"Fichier de soumission sauvegardé: {output_file}")
 
 
 
@@ -321,7 +327,23 @@ if __name__ == '__main__':
             trainer.train()
         # test_results = trainer.evaluate()
 
-    if CKPT_PATH is None:  # Log uniquement si on a entraîné un modèle
+    test_results = None  # Initialisation pour éviter l'erreur d'unbound variable
+    trainer = None  # S'assure que trainer est toujours défini
+
+    if CROSS_VALIDATION:
+        test_results = cross_validate(data)  # Récupère les résultats de la CV
+        print("Résultats finaux CV:", test_results)
+    else:
+        dataset = split_data(data)
+        trainer = NLPTrainer(dataset, ckpt_path=CKPT_PATH)
+        if CKPT_PATH is None:
+            trainer.train()
+        test_results = trainer.evaluate()  # Définir test_results ici aussi
+
+    if trainer is not None:
+        trainer.inference_submission()
+
+    if CKPT_PATH is None and test_results is not None:
         log_results({
             'MODEL_NAME': MODEL_NAME,
             'EARLY_STOPPING': EARLY_STOPPING,
@@ -332,4 +354,3 @@ if __name__ == '__main__':
             'TRAIN_EPOCHS': TRAIN_EPOCHS,
             'BATCH_SIZE': BATCH_SIZE
         }, test_results)
-    trainer.inference_submission()
