@@ -15,7 +15,7 @@ MODELS = [
 EARLY_STOPPING = True
 BATCH_SIZE = 64,
 # "STRATIFY": True, on ne peut utiliser la stratification sans DATA_AUGMENTATION
-TRAIN_EPOCHS = 2,
+TRAIN_EPOCHS = 1,
 LEARNING_RATE = 3e-5
 RANDOM_STATE = True
 
@@ -49,8 +49,8 @@ def run_model_comparison():
         metrics = trainer.evaluate()
         results.append({
             "Model": model_name,
-            "Accuracy": metrics["eval_accuracy"],
-            "F1": metrics["eval_f1"]
+            "Accuracy": metrics["accuracy"],
+            "F1": metrics["f1"]
         })
 
     pd.DataFrame(results).to_csv(RESULTS_FILE_MODEL, index=False)
