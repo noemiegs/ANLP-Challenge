@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from model_intfloat import NLPTrainer, split_data, augment_data, remove_urls, cross_validate
+from model import NLPTrainer, split_data, augment_data, remove_urls, cross_validate
 from transformers import set_seed
 
 # Paramètres globaux
@@ -15,7 +15,7 @@ MODELS = [
 EARLY_STOPPING = True
 BATCH_SIZE = 64,
 # "STRATIFY": True, on ne peut utiliser la stratification sans DATA_AUGMENTATION
-TRAIN_EPOCHS = 2,
+TRAIN_EPOCHS = 1,
 LEARNING_RATE = 3e-5
 RANDOM_STATE = True
 
@@ -47,11 +47,13 @@ def run_model_comparison():
         trainer = NLPTrainer(dataset, model_name=model_name, model_path=model_path)
         trainer.train()
         metrics = trainer.evaluate()
-        results.append({
-            "Model": model_name,
-            "Accuracy": metrics["eval_accuracy"],
-            "F1": metrics["eval_f1"]
-        })
+        print(f"📊 Résultats: {metrics}")
+        print(metrics.keys())
+        # results.append({
+        #     "Model": model_name,
+        #     "Accuracy": metrics["accuracy"],
+        #     "F1": metrics["f1"]
+        # })
 
     pd.DataFrame(results).to_csv(RESULTS_FILE_MODEL, index=False)
     print(f"Résultats sauvegardés dans {RESULTS_FILE_MODEL}")
@@ -85,22 +87,24 @@ def run_config_tests():
         if merged_config["CROSS_VALIDATION"]:
             # Si CROSS_VALIDATION est True, utiliser la méthode de CV
             metrics = cross_validate(data_aug, n_splits=merged_config["CV_SPLITS"], stratify=merged_config["STRATIFY"])
-            results.append({
-                "Configuration": merged_config["name"],
-                "Accuracy": metrics["eval_accuracy"],
-                "F1": metrics["eval_f1"]
-            })
+            # results.append({
+            #     "Config": merged_config["name"],
+            #     "Accuracy": metrics["accuracy"],
+            #     "F1": metrics["f1"]
+            # })
         else:
             # Sinon, entraîner et évaluer normalement
             dataset = split_data(data_aug, use_stratify=merged_config["STRATIFY"])
             trainer = NLPTrainer(dataset)
             trainer.train()
             metrics = trainer.evaluate()
-            results.append({
-                "Configuration": merged_config["name"],
-                "Accuracy": metrics["eval_accuracy"],
-                "F1": metrics["eval_f1"]
-            })
+            print(f"📊 Résultats: {metrics}")
+            print(metrics.keys())
+            # results.append({
+            #     "Config": merged_config["name"],
+            #     "Accuracy": metrics["accuracy"],
+            #     "F1": metrics["f1"]
+            # })
 
     pd.DataFrame(results).to_csv(RESULTS_FILE_CONFIG, mode='a', header=False, index=False)
     print(f"Résultats des configs sauvegardés dans {RESULTS_FILE_CONFIG}")

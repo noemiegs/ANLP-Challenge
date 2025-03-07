@@ -35,12 +35,12 @@ DATA_PATH = "data/train_submission.csv"
 TEST_PATH = "data/test_without_labels.csv"
 LABEL_MAPPING_PATH = "data/mapping/test_intfloat_mappings.json"
 OUTPUT_PATH = "submission.csv"
-CKPT_PATH = None # si chargement d'un modèle pré-entraîné, inférence uniquement dans ce cas
+CKPT_PATH = '/home/ecstatic_easley/ANLP-Challenge/models/test_intfloat/checkpoint-9401' # si chargement d'un modèle pré-entraîné, inférence uniquement dans ce cas
 
 # paramètres d'entraînement
 MODEL_NAME = "intfloat/multilingual-e5-large-instruct"
 MODEL_PATH_NAME = "models/test_intfloat"
-TRAIN_EPOCHS = 15
+TRAIN_EPOCHS = 1
 LEARNING_RATE = 3e-5
 BATCH_SIZE = 128
 STRATIFY = True
@@ -63,10 +63,10 @@ def augment_data(data):
     if DATA_AUGMENTATION:
         label_counts = data.Label.value_counts()
         data_aug = pd.DataFrame(columns=['Text', 'Label'])
-        for label, count in label_counts[label_counts < 10].items():
+        for label, count in label_counts[label_counts < 20].items():
             label_data = data[data['Label'] == label]
             idx = 0
-            while len(label_data) + len(data_aug[data_aug['Label'] == label]) < 10:
+            while len(label_data) + len(data_aug[data_aug['Label'] == label]) < 20:
                 example = label_data.iloc[idx]['Text']
                 words = example.split()
                 random.shuffle(words)
@@ -130,11 +130,11 @@ def split_data(data, use_stratify=STRATIFY):
     stratify = data['LabelID'] if use_stratify else None 
     random_state = 42 if RANDOM_STATE else None
     train_texts, test_texts, train_labels, test_labels = train_test_split(data['Text'], data['LabelID'], test_size=0.1, stratify=stratify, random_state=random_state)
-    # val_texts, test_texts, val_labels, test_labels = train_test_split(test_texts, test_labels, test_size=0.5, stratify=test_labels if stratify is not None else None, random_state=random_state)
+    val_texts, test_texts, val_labels, test_labels = train_test_split(test_texts, test_labels, test_size=0.5, stratify=test_labels if stratify is not None else None, random_state=random_state)
     return DatasetDict({
         'train': Dataset.from_dict({'Text': train_texts.tolist(), 'LabelID': train_labels.tolist()}),
-        'validation': Dataset.from_dict({'Text': test_texts.tolist(), 'LabelID': test_labels.tolist()}),    # comment for final training
-        # 'test': Dataset.from_dict({'Text': test_texts.tolist(), 'LabelID': test_labels.tolist()})         # comment for final training
+        'validation': Dataset.from_dict({'Text': val_texts.tolist(), 'LabelID': val_labels.tolist()}),    # comment for final training
+        'test': Dataset.from_dict({'Text': test_texts.tolist(), 'LabelID': test_labels.tolist()})         # comment for final training
     })
 
 
@@ -226,8 +226,9 @@ class NLPTrainer:
 
         # Définir les arguments d'entraînement
         args = TrainingArguments(
-            output_dir=self.model_path,  # Maintenant, il est toujours une chaîne valide
-            evaluation_strategy="epoch",  # comment for final training
+            output_dir=self.model_path,
+            overwrite_output_dir=True,
+            evaluation_strategy="epoch", # comment for final training
             save_strategy="epoch",
             save_total_limit=2,
             learning_rate=LEARNING_RATE,
