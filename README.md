@@ -37,7 +37,6 @@ python model_comparison.py
 
 ### Générer le fichier de submission
 
-Générer le fichier de soumission
 Une fois le modèle entraîné, vous pouvez générer le fichier à soumettre sur Kaggle :
 
 ```bash
