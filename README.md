@@ -1,6 +1,6 @@
 # ANLP-Challenge
 
-Ce repo vise à réaliser un classificateur de texte dans le cadre du cours d'ANLP.
+Ce repo vise à réaliser un classifieur de texte dans le cadre du cours d'ANLP.
 
 Comment run le code:
 pip install requirements
